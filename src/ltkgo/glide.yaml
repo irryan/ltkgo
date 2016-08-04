@@ -1,0 +1,6 @@
+package: ltkgo
+import:
+- package: github.com/onsi/ginkgo
+- package: github.com/onsi/gomega
+- package: gopkg.in/yaml.v2
+- package: github.com/irryan/tcp

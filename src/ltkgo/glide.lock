@@ -1,0 +1,12 @@
+hash: b83f2607f1abab76de97a974c5584eb6ebc62e6df5b752700cf46bc718c70315
+updated: 2016-08-03T17:22:22.5950714-07:00
+imports:
+- name: github.com/irryan/tcp
+  version: 7e86f576139510198d84603caae2d1b19fdf9c42
+- name: github.com/onsi/ginkgo
+  version: 74c678d97c305753605c338c6c78c49ec104b5e7
+- name: github.com/onsi/gomega
+  version: 9ed8da19f2156b87a803a8fdf6d126f627a12db1
+- name: gopkg.in/yaml.v2
+  version: e4d366fc3c7938e2958e662b4258c7a89e1f0e3e
+devImports: []
