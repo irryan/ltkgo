@@ -4,6 +4,7 @@ import (
     "encoding/xml"
     "net"
     "reflect"
+    "time"
 )
 
 type LlrpConnection struct {
@@ -20,6 +21,7 @@ func NewLlrpConnection(address string) (*LlrpConnection, error) {
         return nil, err
     }
 
+    conn.SetDeadline(time.Now().Add(1e9))
     llrpConn := &LlrpConnection{
         close: make(chan struct{}),
         conn: conn,
@@ -118,11 +120,11 @@ func (c *LlrpConnection) TransactMessage(message LlrpMessage, expectedType refle
         return nil, err
     }
 
-    ret := reflect.New(expectedType)
-    err = xml.Unmarshal(data, &ret)
+    var m LlrpMessage
+    err = xml.Unmarshal(data, &m)
     if err != nil {
         return nil, err
     }
 
-    return ret, nil
+    return m, nil
 }

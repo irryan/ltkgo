@@ -3,34 +3,39 @@ package ltkgo_test
 import (
     . "github.com/onsi/ginkgo"
     . "github.com/onsi/gomega"
-    "github.com/irryan/tcp/tcp"
+    "github.com/irryan/tcp"
+    "github.com/irryan/tcp/middleware"
 
     . "ltkgo"
 
     "encoding/xml"
     "fmt"
+    "log"
+    "os"
     "reflect"
     "time"
 )
 
 var _ = Describe("LlrpConnection", func() {
     var (
-        server *tcp.TestTcpServer
+        server tcp.TcpServer
         addr, port string
         conn *LlrpConnection
+        em *middleware.ExpectationMiddleware
     )
 
     BeforeEach(func() {
         addr = "127.0.0.1"
         port = "8080"
 
-        server = tcp.NewTestTcpServer(port)
+        em = new(middleware.ExpectationMiddleware)
+        server = tcp.NewTcpServer(log.New(os.Stdout, "", log.LstdFlags), port, em)
         Expect(server.Start()).To(Succeed())
     })
 
     AfterEach(func() {
-        Expect(server.HasFailedExpectations()).To(BeFalse())
-        Expect(server.HasRemainingExpectations()).To(BeFalse())
+        Expect(em.HasFailedExpectations()).To(BeFalse())
+        Expect(em.HasRemainingExpectations()).To(BeFalse())
         server.Stop()
     })
 
@@ -60,7 +65,7 @@ var _ = Describe("LlrpConnection", func() {
         It("Sends a message which is received", func() {
             m := LlrpMessage{X: 5}
 
-            server.AddExpectation(func(buff []byte) error {
+            em.AddExpectation(func(buff []byte) ([]byte, error) {
                 defer GinkgoRecover()
                 data, err := ParseLlrpFrame(buff)
                 Expect(err).ToNot(HaveOccurred())
@@ -68,7 +73,8 @@ var _ = Describe("LlrpConnection", func() {
                 var v LlrpMessage
                 Expect(xml.Unmarshal(data, &v)).To(Succeed())
                 Expect(v).To(Equal(m))
-                return nil
+
+                return nil, nil
             })
 
             Expect(conn.SendMessage(m)).To(Succeed())
@@ -83,13 +89,26 @@ var _ = Describe("LlrpConnection", func() {
 
         It("Sends a message which is received and receives the expected response", func() {
             m := LlrpMessage{X: 5}
+            expected := LlrpMessage{X:10}
+            b, err := xml.Marshal(expected)
+            Expect(err).ToNot(HaveOccurred())
 
-            server.AddExpectation(func(buff []byte) error {
+            em.AddExpectation(func(buff []byte) ([]byte, error) {
                 defer GinkgoRecover()
-                return nil
+                data, err := ParseLlrpFrame(buff)
+                Expect(err).ToNot(HaveOccurred())
+
+                var v LlrpMessage
+                Expect(xml.Unmarshal(data, &v)).To(Succeed())
+                Expect(v).To(Equal(m))
+
+                frame, _ := NewLlrpFrame(b)
+                return frame, nil
             })
 
-            Expect(conn.TransactMessage(m, reflect.TypeOf((*LlrpMessage)(nil)).Elem())).To(Succeed())
+            resp, err := conn.TransactMessage(m, reflect.TypeOf((*LlrpMessage)(nil)).Elem())
+            Expect(resp.(LlrpMessage)).To(Equal(expected))
+            Expect(err).ToNot(HaveOccurred())
             time.Sleep(100*time.Millisecond)
         })
     })
